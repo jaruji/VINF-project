@@ -29,11 +29,17 @@ stopwords=nltk.corpus.stopwords.words('english')
 def clean_article(text):    
      #remove the text tag int he beggining of the article xml
     text = re.sub(br'<text.*>', br'', text)
+    #remove images ([[File]] - regexp from https://stackoverflow.com/questions/34717096/how-to-remove-all-files-from-wiki-string/34751544#34751544
+    text = re.sub(br'\[\[[Ff]ile:[^[\]]*(?:\[\[[^[\]]*]][^[\]]*)*]]', br'', text)
+    text = re.sub(br'\[\[:[fF]ile:.*\]\]', br'', text)
+    text = re.sub(br'\[\[[fF]ile:.*\]\]', br'', text)
+    text = re.sub(br'File:.*', br'', text)
     text = re.sub(br'[\']{2,3}', br'', text)
     #remove all citations - these are irrelevant for generating abstract
     text = re.sub(br'\{\{[cC]ite[^\]]+\|([^\}]+)\}\}', br'', text) 
     #need to remove tables, {{}} these things and so on
-    #........
+    text = re.sub(br'\{\| class=\"wikitable[^\\}]+\|\}', br'', text) 
+
     #short description is important for us, replace it with a better format
     #text = re.sub(br'{{[sS]hort description\|(.*)}}', br'DESCRIPTION: \1.', text)
     #remove {{}} constructions, we already parsed all that are relevant to us
@@ -42,8 +48,7 @@ def clean_article(text):
     text = re.sub(br'\{\|([^\}]+)\|\}', br'', text)
     #remove all comments
     text = re.sub(br'&lt;!--[^\-]+--&gt;', br'', text)
-    #remove images ([[File]] - regexp from https://stackoverflow.com/questions/34717096/how-to-remove-all-files-from-wiki-string/34751544#34751544
-    text = re.sub(br'\[\[[Ff]ile:[^[\]]*(?:\[\[[^[\]]*]][^[\]]*)*]]', br'', text)
+    
     
     text = re.sub(br'\[\[[^\]]+\|([^\]]+)\]\]', br'\1', text)
     text = re.sub(br'\[\[([^\]]+)\]\]', br'\1', text)
@@ -62,6 +67,7 @@ def clean_article(text):
     text = re.sub(br'&amp;', br'&', text)
     text = re.sub(br'nbsp;', br' ', text)
     text = re.sub(br'\\{1,}n{1,}', br'', text)
+    
     #text = re.sub(br'\\{1,}', br'', text)
     return text
 
@@ -147,7 +153,7 @@ def normalize_dict(word_count):
 
 
 def evaluate_sentences(text, word_count):
-    sentences = nltk.sent_tokenize(str(text)) #utf-8 here fixes special characters, breaks everything else though...
+    sentences = nltk.sent_tokenize(str(text, 'utf-8')) #utf-8 here fixes special characters, breaks everything else though...
     sent_score = {}
     for sentence in sentences:
         for word in nltk.word_tokenize(sentence):
@@ -157,7 +163,7 @@ def evaluate_sentences(text, word_count):
                 else:
                     sent_score[sentence] += word_count[word]
         if len(sentence.split(' ')) > 20:
-            sent_score[sentence] = sent_score[sentence] / 2
+            sent_score[sentence] = -1
     return sent_score
 
 
@@ -179,6 +185,8 @@ def generate_article_abstract(sent_score, f, line_count, description):
         sent = str.encode(sentence, 'utf-8')
         sent = re.sub(rb'\\{1,}n{1,}', rb'', sent)
         sent = re.sub(rb'\\{1,}', rb'', sent)
+        sent = sent.strip(b'\n')
+        sent = sent.strip(b'\t')
         f.write(sent + b" ")
     f.write(b" </my-abstract>\n")
     
@@ -249,6 +257,7 @@ with open(output, 'wb') as f, gzip.open(enabst, 'rb') as gz:
                 #if any(x in line for x in matches):
                 #    break
                 if(b"</text>" in line):
+                    #f.write(text)
                     find_matching_abstract(title, f, gz)
                     #print(curr_line)
                     text = parse_infobox(text)
