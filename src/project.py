@@ -22,7 +22,7 @@ enwiki =  '../data/enwiki-20201020-pages-articles.xml.bz2'
 enabst = '../data/enwiki-20201020-abstract.xml.gz'
 write = False;
 
-lines = 10000000
+lines = 10000
 #for 1 000 000 lines, the program runs for 30 minutes
 
 stopwords=nltk.corpus.stopwords.words('english')
@@ -38,7 +38,7 @@ def insert(ID, title, wikiAbstract, myAbstract, keywords, similarity):
             "similarity": similarity,
             "keywords": keywords
     }
-    es.index(index='final',doc_type='test',id=ID, body=payload)
+    es.index(index='abstract',doc_type='test',id=ID, body=payload)
 
 
 def clean_article(text):    
@@ -313,6 +313,7 @@ with gzip.open(enabst, 'rb') as gz:
                 if(b"</text>" in line):
                     #f.write(text)
                     try:
+                        #main pipeline, in try except block because we dont want the program to crash - it runs for ages, if we encounter an exception we simply skip the article
                         articleCount += 1
                         wikiAbstract = find_matching_abstract(title, gz)
                         #wikiAbstract = b"test"
@@ -343,6 +344,7 @@ with gzip.open(enabst, 'rb') as gz:
   gz.close()
   #f.close()
   end = time.time()
+  #print frequency analysis results
   print("\n\nFrequency analysis\n")
   print("Disambiguation pages: " + str(disambiguationCount) + "\nRedirect pages: " + str(redirectCount) + "\nTotal articles / abstracts generated: " + str(articleCount))
   print()

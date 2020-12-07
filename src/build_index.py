@@ -15,7 +15,7 @@ def check(url):
 
 
 def build():
-    url = "http://localhost:9200/final"
+    url = "http://localhost:9200/abstract"
     json_data = check(url)
 
     if(not 'error' in json_data):
